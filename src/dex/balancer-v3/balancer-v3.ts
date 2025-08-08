@@ -28,7 +28,7 @@ import balancerBatchRouterAbi from '../../abi/balancer-v3/batch-router.json';
 import { getGasCost } from './getGasCost';
 import { Block } from '@ethersproject/abstract-provider';
 import { BalancerEventHook } from './hooks/balancer-hook-event-subscriber';
-import { removeCircularStepPairs } from './utils';
+import { removeCircularStepPairs, fromScaled18 } from './utils';
 
 const MAX_UINT256 =
   '115792089237316195423570985008687907853269984665640564039457584007913129639935';
@@ -280,14 +280,18 @@ export class BalancerV3 extends SimpleExchange implements IDex<BalancerV3Data> {
           );
 
           let unit = 0n;
-          if (unitAmount < maxSwapAmount)
-            unit = this.eventPools.getSwapResult(
+          if (unitAmount < maxSwapAmount) {
+            const scaled18Unit = this.eventPools.getSwapResult(
               steps,
               unitAmount,
               swapKind,
               block.timestamp,
               this.eventHooks.getState(blockNumber) || {},
             );
+
+            // Convert from Scaled18 to destination token decimals
+            unit = fromScaled18(scaled18Unit, destToken.decimals);
+          }
 
           const poolExchangePrice: PoolPrices<BalancerV3Data> = {
             prices: new Array(amounts.length).fill(0n),
@@ -304,12 +308,18 @@ export class BalancerV3 extends SimpleExchange implements IDex<BalancerV3Data> {
           for (let j = 0; j < amounts.length; j++) {
             if (amounts[j] < maxSwapAmount) {
               // Uses balancer maths to calculate swap
-              poolExchangePrice.prices[j] = this.eventPools.getSwapResult(
+              const scaled18Price = this.eventPools.getSwapResult(
                 steps,
                 amounts[j],
                 swapKind,
                 block.timestamp,
                 this.eventHooks.getState(blockNumber) || {},
+              );
+
+              // Convert from Scaled18 to destination token decimals
+              poolExchangePrice.prices[j] = fromScaled18(
+                scaled18Price,
+                destToken.decimals,
               );
             }
           }

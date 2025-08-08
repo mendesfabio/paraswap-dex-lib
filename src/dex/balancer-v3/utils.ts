@@ -8,6 +8,22 @@ import { HooksConfigMap } from './hooks/balancer-hook-event-subscriber';
 import { ReClammApiName } from './reClammPool';
 import { Step } from './types';
 
+/**
+ * Convert a value from Scaled18 to the specified token decimals
+ * @param scaled18Value - Value in Scaled18 (18 decimals)
+ * @param tokenDecimals - Target token decimals (max 18)
+ * @returns Value converted to token decimals
+ */
+export function fromScaled18(
+  scaled18Value: bigint,
+  tokenDecimals: number,
+): bigint {
+  if (tokenDecimals === 18) {
+    return scaled18Value;
+  }
+  return scaled18Value / 10n ** BigInt(18 - tokenDecimals);
+}
+
 export function getUniqueHookNames(hooksConfigMap: HooksConfigMap): string {
   // Use Object.values to get all HookConfig objects
   // Then map to extract just the names
